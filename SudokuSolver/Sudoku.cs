@@ -21,11 +21,7 @@ internal class Sudoku
         => create 27 NumberGroup managers.
 
         Map each x, y of the starting grid into all relevant NumberGroup instances.
-        - Each cell is in a row, column and grid, so each x, y should map to 3 NumberGroup instances.
-
-        NumberGroup.CanHave(number) : Returns whether that number group already contains the given nuumber.
-        NumberGroup.Add(number)     : Adds a number to a NumberGroup.
-        NumberGroup.Remove(number   : Removes a number from a NumberGroup.
+        - Each cell is in a row, column and grid, so each x, y should map to 3 NumberGroup instances
 
         Brute-force every value for x, y.
         Use recursion.
@@ -122,7 +118,7 @@ internal class Sudoku
         if (startIndex == 9 * 9)
             return true;
 
-        if (_startingGrid[startIndex] == 0)
+        if (_startingGrid[startIndex] == 0) // If no seed value ...
         {
             for (int c = 1; c < 10; c++) // Try 1..9
             {
@@ -140,7 +136,6 @@ internal class Sudoku
         else
             return Solve(startIndex + 1);
     }
-
     private void AddTry(int index, int c)
     {
         foreach (var numberGroup in _groupMap[index])
@@ -148,7 +143,6 @@ internal class Sudoku
 
         _startingGrid[index] = c;
     }
-
     private void RemoveTry(int index, int c)
     {
         foreach (var numberGroup in _groupMap[index])
@@ -156,7 +150,6 @@ internal class Sudoku
 
         _startingGrid[index] = 0;
     }
-
     private bool Try(int index, int c)
     {
         foreach (var numberGroup in _groupMap[index])
