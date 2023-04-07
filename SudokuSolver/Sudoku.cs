@@ -1,14 +1,12 @@
-﻿// See https://aka.ms/new-console-template for more information
-using SudokuSolver;
-using System.ComponentModel.Design;
+﻿using SudokuSolver;
 
 internal class Sudoku
 {
-    private int[,] _startingGrid;
+    private int[] _startingGrid;
     private readonly List<NumberGroup> _numberGroups;
-    private readonly List<NumberGroup>[,] _groupMap;
+    private readonly List<NumberGroup>[] _groupMap;
 
-    public Sudoku(int[,] startingGrid)
+    public Sudoku(int[] startingGrid)
     {
         _startingGrid = startingGrid;
 
@@ -35,19 +33,19 @@ internal class Sudoku
 
          */
 
-        _numberGroups = new List<NumberGroup>();
+        _numberGroups = new List<NumberGroup>(9 * 3);
 
-        _groupMap = new List<NumberGroup>[9, 9];
+        _groupMap = new List<NumberGroup>[9 * 9];
 
         for (int c = 0; c < 9 * 9; c++)
-            _groupMap[c / 9, c % 9] = new List<NumberGroup>();
+            _groupMap[c] = new List<NumberGroup>();
 
         AddRows(_numberGroups, _groupMap, startingGrid);
         AddColumns(_numberGroups, _groupMap, startingGrid);
         AddBoxes(_numberGroups, _groupMap, startingGrid);
     }
 
-    private void AddRows(List<NumberGroup> numberGroups, List<NumberGroup>[,] groupMap, int[,] startingGrid)
+    private void AddRows(List<NumberGroup> numberGroups, List<NumberGroup>[] groupMap, int[] startingGrid)
     {
         for (int y = 0; y < 9; y++)
         {
@@ -55,14 +53,14 @@ internal class Sudoku
 
             for (int x = 0; x < 9; x++)
             {
-                groupMap[y, x].Add(group);
-                if (startingGrid[y, x] != 0)
-                    group.Add(startingGrid[y, x]);
+                groupMap[y * 9 + x].Add(group);
+                if (startingGrid[y * 9 + x] != 0)
+                    group.Add(startingGrid[y * 9 + x]);
             }
             numberGroups.Add(group);
         }
     }
-    private void AddColumns(List<NumberGroup> numberGroups, List<NumberGroup>[,] groupMap, int[,] startingGrid)
+    private void AddColumns(List<NumberGroup> numberGroups, List<NumberGroup>[] groupMap, int[] startingGrid)
     {
         for (int x = 0; x < 9; x++)
         {
@@ -70,14 +68,14 @@ internal class Sudoku
 
             for (int y = 0; y < 9; y++)
             {
-                groupMap[y, x].Add(group);
-                if (startingGrid[y, x] != 0)
-                    group.Add(startingGrid[y, x]);
+                groupMap[y * 9 + x].Add(group);
+                if (startingGrid[y * 9 + x] != 0)
+                    group.Add(startingGrid[y * 9 + x]);
             }
             numberGroups.Add(group);
         }
     }
-    private void AddBoxes(List<NumberGroup> numberGroups, List<NumberGroup>[,] groupMap, int[,] startingGrid)
+    private void AddBoxes(List<NumberGroup> numberGroups, List<NumberGroup>[] groupMap, int[] startingGrid)
     {
         var boxGroups = new List<NumberGroup>(9);
 
@@ -89,8 +87,8 @@ internal class Sudoku
             for (int x = 0; x < 9; x++)
             {
                 var boxGroup = boxGroups[y / 3 * 3 + x / 3];
-                groupMap[y, x].Add(boxGroup);
-                if (startingGrid[y, x] != 0)
+                groupMap[y * 9 + x].Add(boxGroup);
+                if (startingGrid[y * 9 + x] != 0)
                 {
                     // Get the boxGroup.
                     // 012
@@ -98,7 +96,7 @@ internal class Sudoku
                     // 678
                     int xindex = x / 3;
                     int yindex = y / 3;
-                    boxGroups[yindex * 3 + xindex].Add(startingGrid[y, x]);
+                    boxGroups[yindex * 3 + xindex].Add(startingGrid[y * 9 + x]);
                 }
             }
         }
@@ -111,9 +109,8 @@ internal class Sudoku
         for (int y = 0; y < 9; y++)
         {
             for (int x = 0; x < 9; x++)
-            {
-                Console.Write(_startingGrid[y, x]);
-            }
+                Console.Write(_startingGrid[y * 9 + x]);
+
             Console.WriteLine();
         }
     }
@@ -123,18 +120,15 @@ internal class Sudoku
         if (startIndex == 9 * 9)
             return true;
 
-        int x = startIndex % 9;
-        int y = startIndex / 9;
-
-        if (_startingGrid[y, x] == 0)
+        if (_startingGrid[startIndex] == 0)
         {
             for (int c = 1; c < 10; c++) // Try 1..9
             {
-                if (Try(x, y, c) == true) // c might work at x, y ...
+                if (Try(startIndex, c) == true) // c might work at current index ...
                 {
-                    AddTry(x, y, c);
+                    AddTry(startIndex, c);
                     if (Solve(startIndex + 1) == false) // c ultimately didn't work.
-                        RemoveTry(x, y, c);
+                        RemoveTry(startIndex, c);
                     else
                         return true;
                 }
@@ -145,25 +139,25 @@ internal class Sudoku
             return Solve(startIndex + 1);
     }
 
-    private void AddTry(int x, int y, int c)
+    private void AddTry(int index, int c)
     {
-        foreach (var numberGroup in _groupMap[y, x])
+        foreach (var numberGroup in _groupMap[index])
             numberGroup.Add(c);
 
-        _startingGrid[y, x] = c;
+        _startingGrid[index] = c;
     }
 
-    private void RemoveTry(int x, int y, int c)
+    private void RemoveTry(int index, int c)
     {
-        foreach (var numberGroup in _groupMap[y, x])
-                numberGroup.Remove(c);
-        
-        _startingGrid[y, x] = 0;
+        foreach (var numberGroup in _groupMap[index])
+            numberGroup.Remove(c);
+
+        _startingGrid[index] = 0;
     }
 
-    private bool Try(int x, int y, int c)
+    private bool Try(int index, int c)
     {
-        foreach (var numberGroup in _groupMap[y, x])
+        foreach (var numberGroup in _groupMap[index])
             if (numberGroup.Contains(c)) // Number is already present.
                 return false;
 

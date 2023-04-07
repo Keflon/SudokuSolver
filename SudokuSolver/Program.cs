@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 Console.WriteLine("Hello, World!");
 
-int[,] startingGrid = new[,]
+int[] startingGrid = new[]
 {
 #if false
 {0, 0, 5, 8, 0, 6, 4, 0, 0},
@@ -28,15 +28,15 @@ int[,] startingGrid = new[,]
 {0, 0, 0, 0, 1, 8, 2, 0, 5},
 #else
 #if true
-{0, 0, 0, 0, 0, 0, 0, 2, 6},
-{0, 0, 0, 4, 7, 0, 0, 3, 9},
-{0, 0, 1, 9, 3, 0, 0, 7, 0},
-{6, 0, 0, 0, 0, 5, 0, 9, 0},
-{7, 0, 0, 0, 0, 0, 0, 0, 5},
-{0, 5, 0, 1, 0, 0, 0, 0, 2},
-{0, 4, 0, 0, 1, 3, 2, 0, 0},
-{1, 7, 0, 0, 6, 4, 0, 0, 0},
-{5, 2, 0, 0, 0, 0, 0, 0, 0}
+0, 0, 0, 0, 0, 0, 0, 2, 6,
+0, 0, 0, 4, 7, 0, 0, 3, 9,
+0, 0, 1, 9, 3, 0, 0, 7, 0,
+6, 0, 0, 0, 0, 5, 0, 9, 0,
+7, 0, 0, 0, 0, 0, 0, 0, 5,
+0, 5, 0, 1, 0, 0, 0, 0, 2,
+0, 4, 0, 0, 1, 3, 2, 0, 0,
+1, 7, 0, 0, 6, 4, 0, 0, 0,
+5, 2, 0, 0, 0, 0, 0, 0, 0
 #else
 #if false
 {7, 0, 1, 2, 8, 0, 0, 0, 0},
@@ -53,13 +53,13 @@ int[,] startingGrid = new[,]
 #endif
 #endif
 };
-#if false
+#if true
 var sw = new Stopwatch();
 sw.Start();
 
 for (int c = 0; c < 10000; c++)
 {
-    var startingGridCopy = (int[,])startingGrid.Clone();
+    var startingGridCopy = (int[])startingGrid.Clone();
     new Sudoku(startingGridCopy).Solve(0);
 }
 sw.Stop();
