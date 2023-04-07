@@ -33,8 +33,10 @@ internal class Sudoku
 
          */
 
+        // 9 rows, 9 columns and 9 'boxes'.
         _numberGroups = new List<NumberGroup>(9 * 3);
 
+        // 9 * 9 Soduku cells. This maps each cell to 3 NumberGroups.
         _groupMap = new List<NumberGroup>[9 * 9];
 
         for (int c = 0; c < 9 * 9; c++)
