@@ -43,20 +43,22 @@
             return (_group & mask) != 0;
         }
 
-        public bool Add(int mask)
+        public void Add(int mask)
         {
-            //if (Contains(number) == true)
-            //    throw new InvalidOperationException("Number already present");
+#if DEBUG
+            if (Contains(mask) == true)
+                throw new InvalidOperationException("Number already present");
+#endif
             _group |= mask;
-            return true;
         }
 
-        public bool Remove(int mask)
+        public void Remove(int mask)
         {
-            //if (Contains(number) == false)
-            //    throw new InvalidOperationException("Number not present");
+#if DEBUG
+            if (Contains(mask) == false)
+                throw new InvalidOperationException("Number not present");
+#endif
             _group ^= mask;
-            return true;
         }
     }
 }
