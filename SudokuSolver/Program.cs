@@ -1,6 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Diagnostics;
 
+// Milliseconds:0.2142
+// Milliseconds:0.1044
+
 Console.WriteLine("Hello, World!");
 
 int[] startingGrid = new[]

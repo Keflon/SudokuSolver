@@ -48,12 +48,13 @@ internal class Sudoku
         for (int y = 0; y < 9; y++)
         {
             var group = new NumberGroup();
-
+            int mask = 1;
             for (int x = 0; x < 9; x++)
             {
+                mask >>= 1;
                 groupMap[y * 9 + x].Add(group);
                 if (startingGrid[y * 9 + x] != 0)
-                    group.Add(startingGrid[y * 9 + x]);
+                    group.Add(1 << startingGrid[y * 9 + x]);
             }
             numberGroups.Add(group);
         }
@@ -68,7 +69,7 @@ internal class Sudoku
             {
                 groupMap[y * 9 + x].Add(group);
                 if (startingGrid[y * 9 + x] != 0)
-                    group.Add(startingGrid[y * 9 + x]);
+                    group.Add(1 << startingGrid[y * 9 + x]);
             }
             numberGroups.Add(group);
         }
@@ -94,7 +95,7 @@ internal class Sudoku
                     // 678
                     int xindex = x / 3;
                     int yindex = y / 3;
-                    boxGroups[yindex * 3 + xindex].Add(startingGrid[y * 9 + x]);
+                    boxGroups[yindex * 3 + xindex].Add(1 << startingGrid[y * 9 + x]);
                 }
             }
         }
@@ -120,15 +121,20 @@ internal class Sudoku
 
         if (_startingGrid[startIndex] == 0) // If no seed value ...
         {
+            int mask = 1;
             for (int c = 1; c < 10; c++) // Try 1..9
             {
-                if (Try(startIndex, c) == true) // c might work at current index ...
+                mask <<= 1;
+                if (Try(startIndex, mask) == true) // c might work at current index ...
                 {
-                    AddTry(startIndex, c);
+                    AddTry(startIndex, mask);
                     if (Solve(startIndex + 1) == false) // c ultimately didn't work.
-                        RemoveTry(startIndex, c);
+                        RemoveTry(startIndex, mask);
                     else
+                    {
+                        _startingGrid[startIndex] = c;
                         return true;
+                    }
                 }
             }
             return false;
@@ -136,25 +142,26 @@ internal class Sudoku
         else
             return Solve(startIndex + 1);
     }
-    private void AddTry(int index, int c)
+    private void AddTry(int index, int mask)
     {
-        foreach (var numberGroup in _groupMap[index])
-            numberGroup.Add(c);
-
-        _startingGrid[index] = c;
+        _groupMap[index][0].Add(mask);
+        _groupMap[index][1].Add(mask);
+        _groupMap[index][2].Add(mask);
     }
-    private void RemoveTry(int index, int c)
+    private void RemoveTry(int index, int mask)
     {
-        foreach (var numberGroup in _groupMap[index])
-            numberGroup.Remove(c);
-
-        _startingGrid[index] = 0;
+        _groupMap[index][0].Remove(mask);
+        _groupMap[index][1].Remove(mask);
+        _groupMap[index][2].Remove(mask);
     }
-    private bool Try(int index, int c)
+    private bool Try(int index, int mask)
     {
-        foreach (var numberGroup in _groupMap[index])
-            if (numberGroup.Contains(c)) // Number is already present.
-                return false;
+        if (_groupMap[index][0].Contains(mask))
+            return false;
+        if (_groupMap[index][1].Contains(mask))
+            return false;
+        if (_groupMap[index][2].Contains(mask))
+            return false;
 
         return true;
     }
