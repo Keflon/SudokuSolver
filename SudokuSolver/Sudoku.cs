@@ -121,17 +121,11 @@ Unwind if a path fails.
             for (int x = 0; x < 9; x++)
             {
                 int xindex = x / 3;
-
+                // Get the boxGroup.
+                // 012
+                // 345
+                // 678
                 var boxGroupIndex = yindex * 3 + xindex;
-
-                //if (startingGrid[y * 9 + x] != 0)
-                //{
-                //    // Get the boxGroup.
-                //    // 012
-                //    // 345
-                //    // 678
-                //    numberGroups[9 + 9 + boxGroupIndex] |= (1 << startingGrid[y * 9 + x]);
-                //}
                 groupMap[(y * 9 + x) * 3 + 2] = 9 + 9 + boxGroupIndex;
             }
         }
