@@ -31,7 +31,7 @@ the number is removed from the groups and the next number is tested.
 Each group is represented by a bitfield, where bits 1..9 represent the presence or absence of the numbers 
 1..9 in any one of the cells the group represents.  
 
-I got a bit carried away with pointers and that let to a 20x increase in performance. 
+I got a bit carried away with pointers and that led to a 20x increase in performance. 
 You can follow the journey in the GIT history.
 
 If you've got this far, please consider starring the repo.
