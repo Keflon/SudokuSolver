@@ -1,12 +1,17 @@
-﻿// See https://aka.ms/new-console-template for more information
-using SudokuSolver;
+﻿#define PERF_TEST
 using System.Diagnostics;
 
+// Number of times to run the test. Make this high enough to let the CPU go turbo, giving quicker average results.
+const int loopCount = 100000;
+
+// Average times per solution as optimisations are added, for data starting 0, 0, 0, 0, 0, 0, 0, 2, 6, ...
+// Test machine is an Intel i7-10510U laptop running a Release build.
 // Milliseconds:0.2142
 // Milliseconds:0.1044
 // Milliseconds:0.0482
 // Milliseconds:0.01454
-Console.WriteLine("Hello, World!");
+// Milliseconds:0.0113
+Console.WriteLine("Hello, Sudoku!");
 
 int[] startingGrid = new[]
 {
@@ -48,31 +53,36 @@ int[] startingGrid = new[]
 #endif
 };
 
-#if true
+var game = new Sudoku();
+
+#if PERF_TEST
 var sw = new Stopwatch();
 sw.Start();
 
-for (int c = 0; c < 100000; c++)
+for (int c = 0; c < loopCount; c++)
 {
-    new Sudoku(startingGrid).Solve();
+    game.Solve(startingGrid);
 }
 sw.Stop();
 
-Console.WriteLine($"Milliseconds:{sw.ElapsedMilliseconds / 100000.0}");
-Console.WriteLine($"Seconds:{sw.ElapsedMilliseconds / 100000.0 / 1000.0}");
+Console.WriteLine($"Total iterations: {loopCount}");
+Console.WriteLine($"Milliseconds per Solve:{sw.ElapsedMilliseconds / (double)loopCount}  <--=");
+Console.WriteLine($"Seconds per Solve:{sw.ElapsedMilliseconds / (double)loopCount / 1000.0}");
 #endif
-var game = new Sudoku(startingGrid);
-game.PrintGrid();
+Console.WriteLine();
+Console.WriteLine("Input:");
+game.PrintInput(startingGrid);
 Console.WriteLine();
 
-if (game.Solve() == false)
-    Console.WriteLine("Cannot solve");
+if (game.Solve(startingGrid) == false)
+    Console.WriteLine("Cannot solve. Partial result:");
 else
-    Console.WriteLine("Solution");
+    Console.WriteLine("Solution:");
 
 Console.WriteLine();
 
-game.PrintGrid();
+Console.WriteLine("Output:");
+game.PrintOutput();
 
 
 return 0;

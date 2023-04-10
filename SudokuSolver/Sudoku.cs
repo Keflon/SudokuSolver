@@ -1,17 +1,23 @@
-﻿using SudokuSolver;
-using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-
-internal unsafe class Sudoku
+﻿internal unsafe class Sudoku
 {
-    private readonly int[] _startingGridCopy;
+    private int[]? _outputGrid;
     private int* _endCell;
+    private int[] _groupMapOffsets;
 
-    public Sudoku(int[] startingGrid)
+    public Sudoku()
     {
-        _startingGridCopy = (int[])startingGrid.Clone();
+        // The map is the same for each input, but we cannot precalculate using pointers, 
+        // because the groups are not 'fixed' in memory until Solve(..) is called.
+        // Instead, precalculate offsets, and translate those offsets to pointers
+        // as soon as the input is fixed
+        _groupMapOffsets = new int[9 * 9 * 3];
 
+        fixed (int* map = &_groupMapOffsets[0])
+        {
+            AddRows(map);
+            AddColumns(map);
+            AddBoxes(map);
+        }
 
         /*
 TODO:
@@ -34,28 +40,116 @@ Unwind if a path fails.
 
  */
     }
-    public bool Solve()
+    public bool Solve(int[] startingGrid)
     {
-        // 9 rows, 9 columns and 9 'boxes'.
+        _outputGrid = new int[9 * 9];
+
+        // 9 rows, 9 columns and 9 'boxes'. 27 groups.
         int[] numberGroups = new int[9 * 3];
 
-        // 9 * 9 Soduku cells. This maps each cell to 3 NumberGroups.
+        // 9 * 9 Soduku cells. This maps each cell to 3 groups.
         int*[] groupMap = new int*[9 * 9 * 3];
 
-        fixed (int* grid = &_startingGridCopy[0])
+        fixed (int* inputGrid = &startingGrid[0])
+        fixed (int* outputGrid = &_outputGrid[0])
         fixed (int* groups = &numberGroups[0])
+        fixed (int* mapOffsets = &_groupMapOffsets[0])
         fixed (int** map = &groupMap[0])
         {
-            AddRows(groups, map, _startingGridCopy);
-            AddColumns(groups, map, _startingGridCopy);
-            AddBoxes(groups, map, _startingGridCopy);
+            _endCell = outputGrid + 9 * 9;
+            BuildMap(groups, mapOffsets, map);
+            MapInput(inputGrid, outputGrid, map);
 
             //PrintMap(map, 0);
             //PrintMap(map, 1);
             //PrintMap(map, 2);
-            _endCell = grid + 9 * 9;
-            return Solve(grid, map);
+            return Solve(outputGrid, map);
         }
+    }
+
+    /// <summary>
+    /// Map mapOffsets to fixed addresses.
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <param name="mapOffsets"></param>
+    /// <param name="map"></param>
+    private void BuildMap(int* groups, int* mapOffsets, int** map)
+    {
+        for (int c = 0; c < 9 * 9 * 3; c++)
+            //*map++ = &groups[*mapOffsets++]; // Same. 
+            *map++ = groups + (*mapOffsets++); // Same.
+    }
+
+    /// <summary>
+    /// Feed the map with the starting grid and initialise the output.
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <param name="map"></param>
+    private void MapInput(int* inputCell, int* outputCell, int** map)
+    {
+        while (outputCell != _endCell)
+        {
+            if (*inputCell != 0)
+            {
+                Try(map, 1 << *inputCell);
+                *outputCell = *inputCell;
+            }
+            else if(*outputCell != 0)
+                throw new InvalidOperationException();
+            outputCell++;
+            inputCell++;
+            map += 3;
+        }
+    }
+    private void AddRows(int* groupMap)
+    {
+        for (int y = 0; y < 9; y++)
+            for (int x = 0; x < 9; x++)
+                groupMap[(y * 9 + x) * 3 + 0] = y;
+    }
+    private void AddColumns(int* groupMap)
+    {
+        for (int x = 0; x < 9; x++)
+            for (int y = 0; y < 9; y++)
+                groupMap[(y * 9 + x) * 3 + 1] = x + 9;
+    }
+    private void AddBoxes(int* groupMap)
+    {
+        for (int y = 0; y < 9; y++)
+        {
+            int yindex = y / 3;
+            for (int x = 0; x < 9; x++)
+            {
+                int xindex = x / 3;
+
+                var boxGroupIndex = yindex * 3 + xindex;
+
+                //if (startingGrid[y * 9 + x] != 0)
+                //{
+                //    // Get the boxGroup.
+                //    // 012
+                //    // 345
+                //    // 678
+                //    numberGroups[9 + 9 + boxGroupIndex] |= (1 << startingGrid[y * 9 + x]);
+                //}
+                groupMap[(y * 9 + x) * 3 + 2] = 9 + 9 + boxGroupIndex;
+            }
+        }
+    }
+
+    public void PrintInput(int[] startingGrid)
+    {
+        for (int y = 0; y < 9; y++)
+        {
+            for (int x = 0; x < 9; x++)
+                Console.Write(startingGrid[y * 9 + x]);
+
+            Console.WriteLine();
+        }
+    }
+    public void PrintOutput()
+    {
+        PrintInput(_outputGrid);
     }
     private void PrintMap(int** groupMap, int type)
     {
@@ -79,68 +173,10 @@ Unwind if a path fails.
         Console.WriteLine();
         Console.WriteLine();
     }
-    private void AddRows(int* numberGroups, int** groupMap, int[] startingGrid)
-    {
-        for (int y = 0; y < 9; y++)
-        {
-            for (int x = 0; x < 9; x++)
-            {
-                if (startingGrid[y * 9 + x] != 0)
-                    numberGroups[y] |= 1 << startingGrid[y * 9 + x];
-                groupMap[(y * 9 + x) * 3 + 0] = &numberGroups[y];
-            }
-        }
-    }
-    private void AddColumns(int* numberGroups, int** groupMap, int[] startingGrid)
-    {
-        for (int x = 0; x < 9; x++)
-        {
-            for (int y = 0; y < 9; y++)
-            {
-                if (startingGrid[y * 9 + x] != 0)
-                    numberGroups[x + 9] |= 1 << startingGrid[y * 9 + x];
-                groupMap[(y * 9 + x) * 3 + 1] = &numberGroups[x + 9];
-            }
-        }
-    }
-    private void AddBoxes(int* numberGroups, int** groupMap, int[] startingGrid)
-    {
-        for (int y = 0; y < 9; y++)
-        {
-            for (int x = 0; x < 9; x++)
-            {
-                int xindex = x / 3;
-                int yindex = y / 3;
-
-                var boxGroupIndex = yindex * 3 + xindex;
-
-                if (startingGrid[y * 9 + x] != 0)
-                {
-                    // Get the boxGroup.
-                    // 012
-                    // 345
-                    // 678
-                    numberGroups[9 + 9 + boxGroupIndex] |= (1 << startingGrid[y * 9 + x]);
-                }
-                groupMap[(y * 9 + x) * 3 + 2] = &numberGroups[9 + 9 + boxGroupIndex];
-            }
-        }
-    }
-
-    public void PrintGrid()
-    {
-        for (int y = 0; y < 9; y++)
-        {
-            for (int x = 0; x < 9; x++)
-                Console.Write(_startingGridCopy[y * 9 + x]);
-
-            Console.WriteLine();
-        }
-    }
 
     private bool Solve(int* cell, int** map)
     {
-        if (cell == _endCell) 
+        if (cell == _endCell)
             return true;
 
         if (*cell == 0) // If no seed value ...
@@ -156,6 +192,10 @@ Unwind if a path fails.
                     else
                     {
                         // *cell is 0.
+#if DEBUG
+                        if (*cell != 0)
+                            throw new InvalidOperationException();
+#endif
                         *cell = c;
                         return true;
                     }
@@ -169,25 +209,31 @@ Unwind if a path fails.
 
     private void RemoveTry(int** map, int mask)
     {
-        **map++ ^= mask;
-        **map++ ^= mask;
-        **map ^= mask;
+        //**map++ ^= mask;
+        //**map++ ^= mask;
+        //**map ^= mask;
+
+        // It is quicker to index into map than to increment map.
+        *map[0] ^= mask;
+        *map[1] ^= mask;
+        *map[2] ^= mask;
     }
 
     private bool Try(int** map, int mask)
     {
-        if ((**map & mask) != 0)
-            return false;
-        map++;
-        if ((**map & mask) != 0)
-            return false;
-        map++;
-        if ((**map & mask) != 0)
+        // It is quicker to index into map than to increment map after each test.
+        if ((*map[0] & mask) != 0)
             return false;
 
-        **map-- |= mask;
-        **map-- |= mask;
-        **map |= mask;
+        if ((*map[1] & mask) != 0)
+            return false;
+
+        if ((*map[2] & mask) != 0)
+            return false;
+
+        *map[0] |= mask;
+        *map[1] |= mask;
+        *map[2] |= mask;
 
         return true;
     }
