@@ -5,7 +5,7 @@ using System.Diagnostics;
 // Milliseconds:0.2142
 // Milliseconds:0.1044
 // Milliseconds:0.0482
-
+// Milliseconds:0.01454
 Console.WriteLine("Hello, World!");
 
 int[] startingGrid = new[]
@@ -42,7 +42,7 @@ int[] startingGrid = new[]
 0, 4, 0, 0, 1, 3, 2, 0, 0,
 1, 7, 0, 0, 6, 4, 0, 0, 0,
 5, 2, 0, 0, 0, 0, 0, 0, 0
-
+ 
 #endif
 #endif
 #endif
@@ -52,22 +52,20 @@ int[] startingGrid = new[]
 var sw = new Stopwatch();
 sw.Start();
 
-for (int c = 0; c < 10000; c++)
+for (int c = 0; c < 100000; c++)
 {
-    var startingGridCopy = (int[])startingGrid.Clone();
-    new Sudoku(startingGridCopy).Solve(0);
+    new Sudoku(startingGrid).Solve();
 }
 sw.Stop();
 
-Console.WriteLine($"Milliseconds:{sw.ElapsedMilliseconds / 10000.0}");
-Console.WriteLine($"Seconds:{sw.ElapsedMilliseconds / 10000.0 /1000.0}");
+Console.WriteLine($"Milliseconds:{sw.ElapsedMilliseconds / 100000.0}");
+Console.WriteLine($"Seconds:{sw.ElapsedMilliseconds / 100000.0 / 1000.0}");
 #endif
 var game = new Sudoku(startingGrid);
 game.PrintGrid();
-var solved = game.Solve(0);
 Console.WriteLine();
 
-if (game.Solve(0) == false)
+if (game.Solve() == false)
     Console.WriteLine("Cannot solve");
 else
     Console.WriteLine("Solution");

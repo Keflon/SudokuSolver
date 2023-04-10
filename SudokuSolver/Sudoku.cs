@@ -1,108 +1,130 @@
 ﻿using SudokuSolver;
 using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 internal unsafe class Sudoku
 {
-    private int[] _startingGrid;
-    private readonly NumberGroup[] _numberGroups;
-    private readonly NumberGroup[][] _groupMap;
+    private readonly int[] _startingGridCopy;
+    private int* _endCell;
 
     public Sudoku(int[] startingGrid)
     {
-        _startingGrid = startingGrid;
+        _startingGridCopy = (int[])startingGrid.Clone();
+
 
         /*
-        TODO:
+TODO:
 
-        Group 9 numbers into row instances.
-        Group 9 numbers into column instances.
-        Group 9 numbers into box instances.
+Group 9 numbers into row instances.
+Group 9 numbers into column instances.
+Group 9 numbers into box instances.
 
-        The distinction between row, column and box instances should not matter,
-        => create 27 NumberGroups.
+The distinction between row, column and box instances should not matter,
+=> create 27 NumberGroups.
+Use an int for each numbergroup and set a bit for each 'number' that it contains.
+        (if the group has a '4', set bit 4, ...)
 
-        Map each x, y of the starting grid into all relevant NumberGroup instances.
-        - Each cell is in a row, column and grid, so each x, y should map to 3 NumberGroup instances
+Map each x, y of the starting grid into all relevant NumberGroup instances.
+- Each cell is in a row, column and grid, so each x, y should map to 3 NumberGroup instances
 
-        Brute-force every value for x, y.
-        Use recursion.
-        Unwind if a path fails.
+Brute-force every value for x, y.
+Use recursion.
+Unwind if a path fails.
 
-         */
-
+ */
+    }
+    public bool Solve()
+    {
         // 9 rows, 9 columns and 9 'boxes'.
-        _numberGroups = new NumberGroup[9 * 3];
+        int[] numberGroups = new int[9 * 3];
 
         // 9 * 9 Soduku cells. This maps each cell to 3 NumberGroups.
-        _groupMap = new NumberGroup[9 * 9][];
+        int*[] groupMap = new int*[9 * 9 * 3];
 
-        for (int c = 0; c < 9 * 9; c++)
-            _groupMap[c] = new NumberGroup[3];
+        fixed (int* grid = &_startingGridCopy[0])
+        fixed (int* groups = &numberGroups[0])
+        fixed (int** map = &groupMap[0])
+        {
+            AddRows(groups, map, _startingGridCopy);
+            AddColumns(groups, map, _startingGridCopy);
+            AddBoxes(groups, map, _startingGridCopy);
 
-        AddRows(_numberGroups, _groupMap, startingGrid);
-        AddColumns(_numberGroups, _groupMap, startingGrid);
-        AddBoxes(_numberGroups, _groupMap, startingGrid);
+            //PrintMap(map, 0);
+            //PrintMap(map, 1);
+            //PrintMap(map, 2);
+            _endCell = grid + 9 * 9;
+            return Solve(grid, map);
+        }
     }
-
-    private void AddRows(NumberGroup[] numberGroups, NumberGroup[][] groupMap, int[] startingGrid)
+    private void PrintMap(int** groupMap, int type)
     {
         for (int y = 0; y < 9; y++)
         {
-            var group = new NumberGroup();
-            int mask = 1;
             for (int x = 0; x < 9; x++)
             {
-                mask >>= 1;
-                groupMap[y * 9 + x][0]=(group);
-                if (startingGrid[y * 9 + x] != 0)
-                    group.Add(1 << startingGrid[y * 9 + x]);
+                Console.Write($"{*groupMap[(y * 9 + x) * 3 + type]}  ");
             }
-            numberGroups[y] = group;
+            Console.WriteLine();
+        }
+        Console.WriteLine();
+
+        for (int c = 0; c < 9 * 9 * 3; c += 3)
+        {
+            if (c % 27 == 0)
+                Console.WriteLine();
+            Console.Write($"{**groupMap}  ");
+            groupMap += 3;
+        }
+        Console.WriteLine();
+        Console.WriteLine();
+    }
+    private void AddRows(int* numberGroups, int** groupMap, int[] startingGrid)
+    {
+        for (int y = 0; y < 9; y++)
+        {
+            for (int x = 0; x < 9; x++)
+            {
+                if (startingGrid[y * 9 + x] != 0)
+                    numberGroups[y] |= 1 << startingGrid[y * 9 + x];
+                groupMap[(y * 9 + x) * 3 + 0] = &numberGroups[y];
+            }
         }
     }
-    private void AddColumns(NumberGroup[] numberGroups, NumberGroup[][] groupMap, int[] startingGrid)
+    private void AddColumns(int* numberGroups, int** groupMap, int[] startingGrid)
     {
         for (int x = 0; x < 9; x++)
         {
-            var group = new NumberGroup();
-
             for (int y = 0; y < 9; y++)
             {
-                groupMap[y * 9 + x][1]=(group);
                 if (startingGrid[y * 9 + x] != 0)
-                    group.Add(1 << startingGrid[y * 9 + x]);
+                    numberGroups[x + 9] |= 1 << startingGrid[y * 9 + x];
+                groupMap[(y * 9 + x) * 3 + 1] = &numberGroups[x + 9];
             }
-            numberGroups[x + 9] = group;
         }
     }
-    private void AddBoxes(NumberGroup[] numberGroups, NumberGroup[][] groupMap, int[] startingGrid)
+    private void AddBoxes(int* numberGroups, int** groupMap, int[] startingGrid)
     {
-        var boxGroups = new NumberGroup[9];
-
-        for (int c = 0; c < 9; c++)
-            boxGroups[c]=new NumberGroup();
-
         for (int y = 0; y < 9; y++)
         {
             for (int x = 0; x < 9; x++)
             {
-                var boxGroup = boxGroups[y / 3 * 3 + x / 3];
-                groupMap[y * 9 + x][2]=(boxGroup);
+                int xindex = x / 3;
+                int yindex = y / 3;
+
+                var boxGroupIndex = yindex * 3 + xindex;
+
                 if (startingGrid[y * 9 + x] != 0)
                 {
                     // Get the boxGroup.
                     // 012
                     // 345
                     // 678
-                    int xindex = x / 3;
-                    int yindex = y / 3;
-                    boxGroups[yindex * 3 + xindex].Add(1 << startingGrid[y * 9 + x]);
+                    numberGroups[9 + 9 + boxGroupIndex] |= (1 << startingGrid[y * 9 + x]);
                 }
+                groupMap[(y * 9 + x) * 3 + 2] = &numberGroups[9 + 9 + boxGroupIndex];
             }
         }
-        for (int c = 0; c < 9; c++)
-            numberGroups[c + 9 + 9] = boxGroups[c];
     }
 
     public void PrintGrid()
@@ -110,30 +132,31 @@ internal unsafe class Sudoku
         for (int y = 0; y < 9; y++)
         {
             for (int x = 0; x < 9; x++)
-                Console.Write(_startingGrid[y * 9 + x]);
+                Console.Write(_startingGridCopy[y * 9 + x]);
 
             Console.WriteLine();
         }
     }
 
-    internal bool Solve(int startIndex)
+    private bool Solve(int* cell, int** map)
     {
-        if (startIndex == 9 * 9)
+        if (cell == _endCell) 
             return true;
 
-        if (_startingGrid[startIndex] == 0) // If no seed value ...
+        if (*cell == 0) // If no seed value ...
         {
             int mask = 1;
             for (int c = 1; c < 10; c++) // Try 1..9
             {
                 mask <<= 1;
-                if (Try(_groupMap[startIndex], mask) == true) // c might work at current index ...
+                if (Try(map, mask) == true) // c might work at current index ...
                 {
-                    if (Solve(startIndex + 1) == false) // c ultimately didn't work.
-                        RemoveTry(_groupMap[startIndex], mask);
+                    if (Solve(cell + 1, map + 3) == false) // c ultimately didn't work.
+                        RemoveTry(map, mask);
                     else
                     {
-                        _startingGrid[startIndex] = c;
+                        // *cell is 0.
+                        *cell = c;
                         return true;
                     }
                 }
@@ -141,28 +164,30 @@ internal unsafe class Sudoku
             return false;
         }
         else
-            return Solve(startIndex + 1);
+            return Solve(cell + 1, map + 3);
     }
 
-    private void RemoveTry(NumberGroup[] numberGroups, int mask)
+    private void RemoveTry(int** map, int mask)
     {
-        numberGroups[0].Remove(mask);
-        numberGroups[1].Remove(mask);
-        numberGroups[2].Remove(mask);
+        **map++ ^= mask;
+        **map++ ^= mask;
+        **map ^= mask;
     }
 
-    private bool Try(NumberGroup[] numberGroups, int mask)
+    private bool Try(int** map, int mask)
     {
-        if (numberGroups[0].Contains(mask))
+        if ((**map & mask) != 0)
             return false;
-        if (numberGroups[1].Contains(mask))
+        map++;
+        if ((**map & mask) != 0)
             return false;
-        if (numberGroups[2].Contains(mask))
+        map++;
+        if ((**map & mask) != 0)
             return false;
 
-        numberGroups[0].Add(mask);
-        numberGroups[1].Add(mask);
-        numberGroups[2].Add(mask);
+        **map-- |= mask;
+        **map-- |= mask;
+        **map |= mask;
 
         return true;
     }
